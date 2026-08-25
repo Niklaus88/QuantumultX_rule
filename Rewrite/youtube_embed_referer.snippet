@@ -1,0 +1,8 @@
+# > 修复 iOS Notion 内嵌 YouTube 视频 153 错误
+# > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
+
+[rewrite_local]
+^https?://(www.)?youtube(-nocookie)?.com/(embed/|youtubei/v1/player) url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/youtube_embed_referer.js
+
+[mitm]
+hostname = www.youtube.com, www.youtube-nocookie.com
