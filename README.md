@@ -6,7 +6,27 @@
 
 ## 🛠️ 项目列表
 
-### 1. 修复 iOS Notion 内嵌 YouTube 视频报 153 错误
+### 1. Quantumult X 懒人完美配置（QX-lrpz.conf）
+
+开箱即用的标准懒人配置模板，兼顾国内极致高速直连与海外隐私防泄露：
+- **流媒体秒开**：放行 UDP 443（KQUIC），彻底解决微信视频号、朋友圈视频、国内大厂流媒体卡顿转圈问题。
+- **隐私防泄露**：保留 WebRTC 专属 STUN 端口拦截（`3478, 19302-19309`），杜绝真实本地公网 IP 泄露。
+- **DNS 闭环架构**：开启 `no-system` 防劫持，同时通过精准指定 DoH 引导解析（Bootstrap），彻底解决断网重连与冷启动死锁。
+- **精简纯净**：集成主流 App 开屏去广告、高德/12306/滴滴/闲鱼去广告、YouTube 去广告、Spotify/网易云/酷我音乐脚本及 Reddit 自动双语翻译，剔除冗余私有脚本与无效解密域名。
+
+#### 🚀 快捷订阅 / 导入（Quantumult X）
+
+复制以下原始链接直接导入到 Quantumult X 中使用：
+
+```text
+https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/QX-lrpz.conf
+```
+
+> **使用说明**：导入该公开模板后，请在 `[server_remote]` 模块中填入你自己的节点/机场订阅链接，并在 QX 设置中生成并信任你自己的 MitM 根证书即可正常使用。
+
+---
+
+### 2. 修复 iOS Notion 内嵌 YouTube 视频报 153 错误
 
 #### 📖 问题背景
 在 iOS 端使用 Notion App 时，内嵌的 YouTube 视频播放器常出现 **「视频播放器配置错误（错误 153）」**。
@@ -38,6 +58,7 @@ https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Rewrite/youtub
 
 ```text
 ├── README.md                                 # 项目说明文档
+├── QX-lrpz.conf                              # Quantumult X 懒人完美配置文件
 ├── Rewrite/
 │   └── youtube_embed_referer.snippet         # QX 远程重写订阅配置文件
 └── Scripts/
