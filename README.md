@@ -26,7 +26,7 @@ https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/QX-lrpz.conf
 
 #### 💡 关于 DNS 检测出现 “China / 中国服务器” 的特别说明
 
-使用此配置访问 **[BrowserLeaks]**(https://browserleaks.com/dns)、**]IPPure]**(https://ippure.com/) 等隐私检测站时，DNS 列表中可能会看到中国联通/电信/移动等国内机房的 IP 记录。**这属于正常机制，绝非你的真实 IP 发生泄露**，无需担忧：
+使用此配置访问 [**BrowserLeaks**](https://browserleaks.com/dns)、[**IPPure**](https://ippure.com/) 等隐私检测站时，DNS 列表中可能会看到中国联通/电信/移动等国内机房的 IP 记录。**这属于正常机制，绝非你的真实 IP 发生泄露**，无需担忧：
 
 1. **核心原理**：本配置采用了阿里公共 DoH（`dns.alidns.com`）与腾讯公共 DoH（`doh.pub`）作为加密解析通道（兼顾国内流媒体极致的 CDN 就近加速）。检测站探测到的是**阿里/腾讯云端解析集群机房的公网出口 IP**，而非你本地设备的真实宽带 IP。
 2. **核心判定标准**：
