@@ -1,0 +1,19 @@
+# > Pinterest 去广告与追踪拦截
+# > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
+
+[filter_local]
+# 拦截独立广告、埋点与追踪域名
+HOST-SUFFIX, ads.pinterest.com, reject
+HOST-SUFFIX, analytics.pinterest.com, reject
+HOST-SUFFIX, log.pinterest.com, reject
+HOST-SUFFIX, tr.pinterest.com, reject
+HOST-SUFFIX, ad.pinterest.com, reject
+HOST-SUFFIX, ads-api.pinterest.com, reject
+
+[rewrite_local]
+# 拦截信息流与资源接口中的推广内容
+^https?:\/\/api\.pinterest\.com\/v\d+\/(feed|experiences|search|resource) url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/Pinterest.js
+^https?:\/\/www\.pinterest\.com\/resource\/ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/Pinterest.js
+
+[mitm]
+hostname = api.pinterest.com, www.pinterest.com
