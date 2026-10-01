@@ -1,0 +1,12 @@
+# > 黄豆短剧 / 影视 去广告 & VIP 解锁
+# > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
+
+[rewrite_local]
+# 缓存播放请求上下文参数 (POST body)
+^https?:\/\/.*\/api\/(drama\/play|up\/episodePreview) url script-request-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/huangdou.js
+
+# 解密响应数据、净化广告、解锁 VIP 并重加密回传
+^https?:\/\/.*\/api\/(system\/info|ad\/policy|user\/(info|home|vip|favorite)|drama\/(play|doBuy|detail|navBlock|navFilter|searchResult|more|rank|topicDetail|topicList|favorite|love|wish)|movie\/(navBlock|detail|navFilter|favorite|love|history)|up\/(episodePreview|bannerList|episodeFeed|recommend|home|content|episodeList|detail)|search\/movie) url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/huangdou.js
+
+[mitm]
+hostname = *.cocoaview.cc, cocoaview.cc
