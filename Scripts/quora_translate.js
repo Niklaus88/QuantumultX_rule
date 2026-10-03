@@ -5,6 +5,27 @@
  */
 
 (function () {
+    const url = (typeof $request !== 'undefined' ? $request.url : '') || '';
+    const method = ((typeof $request !== 'undefined' ? $request.method : '') || 'GET').toUpperCase();
+
+    // ==========================================
+    // 全局防线：绝对不碰任何 POST 请求、API、GraphQL 与登录鉴权通道
+    // 确保登录流程与 Session Cookies 100% 原始传输，杜绝“Something went wrong”
+    // ==========================================
+    if (
+        method !== 'GET' ||
+        url.includes('/graphql') ||
+        url.includes('/api/') ||
+        url.includes('/_/') ||
+        url.includes('/login') ||
+        url.includes('/signup') ||
+        url.includes('/oauth') ||
+        /\.(js|css|png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|json)(\?|$)/i.test(url)
+    ) {
+        $done({});
+        return;
+    }
+
     // ==========================================
     // Phase 1: 请求头阶段 (script-request-header)
     // 强制移除 br (Brotli) 压缩，改用 gzip，使 QX 能解压并正常注入 HTML
@@ -14,7 +35,6 @@
         let aeKey = Object.keys(headers).find(k => k.toLowerCase() === 'accept-encoding');
         if (aeKey) {
             let ae = headers[aeKey] || '';
-            // 剥离 br，强制走 gzip
             ae = ae.replace(/\bbr,?\s*/gi, '').replace(/,\s*br\b/gi, '').trim();
             if (!ae) ae = 'gzip, deflate';
             headers[aeKey] = ae;
@@ -25,10 +45,19 @@
 
     // ==========================================
     // Phase 2: 响应头阶段 (script-response-header)
-    // 剥离 CSP 安全策略头，确保内联脚本与 Google 翻译引擎能顺利执行
+    // 仅针对 HTML 网页放行 CSP 安全策略头，保护登录凭据与多重 Set-Cookie 头
     // ==========================================
     if (typeof $response !== 'undefined' && typeof $response.headers !== 'undefined' && typeof $response.body === 'undefined') {
         let headers = $response.headers || {};
+        let ctKey = Object.keys(headers).find(k => k.toLowerCase() === 'content-type');
+        let ct = ctKey ? headers[ctKey] : '';
+
+        // 仅在明确是 HTML 响应时处理 CSP，其余任何响应一概不碰
+        if (!ct || !ct.toLowerCase().includes('text/html')) {
+            $done({});
+            return;
+        }
+
         const cspKeys = [
             'content-security-policy',
             'content-security-policy-report-only',
@@ -51,7 +80,6 @@
     if (typeof $response !== 'undefined' && typeof $response.body !== 'undefined') {
         let body = $response.body;
 
-        // 非 200 响应或非 HTML 格式（如接口返回的 JSON、图片等）直接放行
         if ($response.status && $response.status !== 200 && $response.status !== 206) {
             $done({});
             return;
@@ -69,9 +97,8 @@
         const injectPayload = `
 <!-- [QX] Quora Translate & App-Popup Killer -->
 <style id="qx-quora-inject-style">
-  /* 1. 强力屏蔽“下载App / There is more in the app”全屏遮罩与弹窗 */
+  /* 1. 强力屏蔽“下载App / There is more in the app”专属导流弹窗 */
   div[role="dialog"]:has(*:is(h1,h2,h3,div,p):contains("There is more in the app")),
-  div[class*="backdrop"], div[class*="Backdrop"],
   div[class*="blocking_wall"], div[class*="BlockingWall"],
   div[class*="signup_wall"], div[class*="SignupWall"],
   .signup_wall_wrapper {
@@ -82,7 +109,7 @@
     z-index: -9999 !important;
   }
 
-  /* 2. 解除页面滚动锁定与文字模糊 */
+  /* 2. 解除正文内容模糊与页面滚动锁定 */
   html, body, div[class*="qu-overflow--hidden"] {
     overflow: visible !important;
     position: static !important;
@@ -94,7 +121,12 @@
     -webkit-filter: none !important;
   }
 
-  /* 3. 隐藏 Google 翻译原生横幅与多余标记，保持页面美观 */
+  /* 3. 严格保护所有表单、输入框、登录弹窗免受翻译修改，防止 React 渲染崩溃 */
+  form, input, textarea, [class*="login"], [class*="Login"], [class*="signup"], [class*="Signup"], .notranslate {
+    translate: no !important;
+  }
+
+  /* 4. 隐藏 Google 翻译原生横幅与多余标记 */
   .goog-te-banner-frame.skiptranslate, iframe.goog-te-banner-frame { display: none !important; }
   body { top: 0px !important; }
   #goog-gt-tt, .goog-te-balloon-frame { display: none !important; }
@@ -102,7 +134,7 @@
   .goog-text-highlight { background-color: transparent !important; border: none !important; box-shadow: none !important; }
   #google_translate_element { display: none !important; }
 
-  /* 4. 悬浮双语切换球 */
+  /* 5. 悬浮双语切换球 */
   #qx-trans-btn {
     position: fixed !important;
     right: 18px !important;
@@ -175,59 +207,62 @@
     }
   }
 
-  // 强力清除“下载 App (There is more in the app)”弹窗与去登录遮罩
-  function killPopupsAndClean() {
-    // 1. 查找并自动点击 "Stay in browser"
-    var allElements = document.querySelectorAll('button, a, span, div, p');
-    for (var i = 0; i < allElements.length; i++) {
-      var el = allElements[i];
-      if (el.textContent && el.textContent.trim() === 'Stay in browser') {
-        el.click();
+  // 精准仅清理“下载 App (There is more in the app)”弹窗，严禁误触登录框与 remove() 节点
+  function cleanAppBannerAndProtectForms() {
+    // 1. 为表单及登录组件添加 notranslate，保护 React 虚拟 DOM 不被翻译篡改
+    var forms = document.querySelectorAll('form, input, textarea, [class*="login"], [class*="Login"], [class*="signup"], [class*="Signup"]');
+    for (var f = 0; f < forms.length; f++) {
+      forms[f].classList.add('notranslate');
+      forms[f].setAttribute('translate', 'no');
+    }
+
+    // 2. 只有当页面确实弹出了“There is more in the app”时才精准处理该弹窗
+    var headings = document.querySelectorAll('h1, h2, h3, div, p');
+    for (var i = 0; i < headings.length; i++) {
+      var h = headings[i];
+      if (h.textContent && h.textContent.trim() === 'There is more in the app') {
+        var dialog = h.closest('div[role="dialog"], div[class*="Modal"], div[class*="modal"]');
+        if (dialog) {
+          // 仅隐藏，绝不使用 node.remove()，避免破坏 React 内部 Fiber 结构导致报错
+          dialog.style.setProperty('display', 'none', 'important');
+          dialog.style.setProperty('opacity', '0', 'important');
+          dialog.style.setProperty('pointer-events', 'none', 'important');
+
+          var links = dialog.querySelectorAll('a, button, span');
+          for (var j = 0; j < links.length; j++) {
+            if (links[j].textContent && links[j].textContent.trim() === 'Stay in browser') {
+              links[j].click();
+              break;
+            }
+          }
+        }
+        break;
       }
     }
 
-    // 2. 查找包含 "There is more in the app" 的弹窗并彻底移除
-    var dialogs = document.querySelectorAll('div[role="dialog"], div[class*="Modal"], div[class*="modal"], div[class*="overlay"]');
-    for (var j = 0; j < dialogs.length; j++) {
-      var d = dialogs[j];
-      if (d.textContent && (d.textContent.indexOf('There is more in the app') !== -1 || d.textContent.indexOf('Download the free app') !== -1 || d.textContent.indexOf('Stay in browser') !== -1)) {
-        d.style.setProperty('display', 'none', 'important');
-        d.remove();
-      }
-    }
-
-    // 3. 移除遮罩背景层
-    var backdrops = document.querySelectorAll('div[class*="backdrop"], div[class*="Backdrop"]');
-    for (var k = 0; k < backdrops.length; k++) {
-      backdrops[k].style.setProperty('display', 'none', 'important');
-      backdrops[k].remove();
-    }
-
-    // 4. 清除内容模糊与恢复页面滚动
+    // 3. 解除阅读模糊
     var blurred = document.querySelectorAll('[style*="filter: blur"], [style*="filter:blur"]');
     for (var m = 0; m < blurred.length; m++) {
       blurred[m].style.filter = 'none';
       blurred[m].style.webkitFilter = 'none';
     }
-    document.body.style.setProperty('overflow', 'visible', 'important');
-    document.documentElement.style.setProperty('overflow', 'visible', 'important');
   }
 
   // 执行初始化
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function() {
       renderUI();
-      killPopupsAndClean();
+      cleanAppBannerAndProtectForms();
     });
   } else {
     renderUI();
-    killPopupsAndClean();
+    cleanAppBannerAndProtectForms();
   }
 
-  // 监听动态变化（滚动加载回答 / 异步弹出弹窗）
+  // 监听动态变化（滚动加载回答 / 异步弹窗）
   try {
     var observer = new MutationObserver(function() {
-      killPopupsAndClean();
+      cleanAppBannerAndProtectForms();
     });
     observer.observe(document.documentElement, { childList: true, subtree: true });
   } catch(e) {}
@@ -257,7 +292,7 @@ window.googleTranslateElementInit = function() {
 <!-- [QX End] Quora Translate & App-Popup Killer -->
 `;
 
-        // 优先注入到 <head> 顶部，确保样式与去弹窗脚本在网页渲染第一时间执行
+        // 优先注入到 <head> 顶部，确保样式与脚本第一时间生效
         if (/<head[^>]*>/i.test(body)) {
             body = body.replace(/<head[^>]*>/i, '$&' + injectPayload);
         } else if (/<\/head>/i.test(body)) {
