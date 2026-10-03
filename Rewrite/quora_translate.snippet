@@ -1,11 +1,14 @@
-#!name=Quora 自动翻译与免登录净化
-#!desc=自动将 Quora 网页及移动端问答翻译为简体中文，支持 SPA 滚动动态加载翻译，解除强制登录遮罩与内容模糊
+#!name=Quora 自动翻译与体验净化
+#!desc=自动将 Quora 网页及添加到主屏幕的 PWA 翻译为简体中文，实时拦截“下载App”弹窗遮罩，去除免登录限制与内容模糊
 # > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
 
-# 放行 CSP 安全策略头，确保翻译脚本与样式注入生效
-^https?:\/\/(www\.)?quora\.com(\/.*)?$ url script-response-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/quora_translate.js
+# 1. 请求头重写：移除 br 压缩，强制 Quora 返回 gzip，使 QX 能正常解码并篡改 HTML
+^https?:\/\/(www\.)?quora\.com url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/quora_translate.js
 
-# 注入 Google 自动翻译引擎与去遮罩净化补丁
-^https?:\/\/(www\.)?quora\.com(\/.*)?$ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/quora_translate.js
+# 2. 响应头重写：放行 CSP 安全策略头，确保外部翻译脚本和内联样式生效
+^https?:\/\/(www\.)?quora\.com url script-response-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/quora_translate.js
 
-hostname = www.quora.com, quora.com
+# 3. 响应体重写：注入 Google 翻译引擎、自动拦截 App 下载弹窗、解除未登录模糊
+^https?:\/\/(www\.)?quora\.com url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/quora_translate.js
+
+hostname = *.quora.com, quora.com
