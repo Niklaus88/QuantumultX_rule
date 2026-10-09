@@ -2,20 +2,10 @@
 #!desc=绕过试看与每日次数限制，自动提取视频直链，拦截广告与弹窗，支持倍速/画中画/键盘快捷键/高速下载
 # > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
 
-[filter_local]
-# 屏蔽第三方追踪与统计
-HOST-SUFFIX, googletagmanager.com, reject
-HOST-SUFFIX, google-analytics.com, reject
-
-[rewrite_local]
 # 1. 拦截播放统计与失败上报（防止服务器记录试看次数）
 ^https?:\/\/.*yidouge\.(cc|com)\/wp-json\/goon-video\/v1\/(stats|player-failure) url reject-dict
 
-# 2. 原生请求头重写：去除 Brotli (br) 压缩，强制返回 gzip，确保 QX 能稳定解压并篡改 HTML
-^https?:\/\/.*yidouge\.(cc|com)\/video\/ url request-header [aA]ccept-[eE]ncoding:[^\r\n]+ Accept-Encoding: gzip, deflate
-
-# 3. 响应体阶段：解除试看限制、净化页面、注入增强播放器
+# 2. 响应体阶段：解除试看限制、净化页面、注入增强播放器
 ^https?:\/\/.*yidouge\.(cc|com)\/video\/ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/yidouge.js
 
-[mitm]
 hostname = yidouge.cc, *.yidouge.cc, yidouge.com, *.yidouge.com
