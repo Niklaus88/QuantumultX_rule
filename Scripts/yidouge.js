@@ -107,7 +107,7 @@
 
         // 4. 构造注入代码
         const injectPayload = `
-<!-- [QX] Yidaoge Video Unlocker & Enhanced Player -->
+<!-- [QX] Yidouge Video Unlocker & Enhanced Player -->
 <style id="ydg-unlocked-style">
     .watch-status,
     .watch-status--guest,
