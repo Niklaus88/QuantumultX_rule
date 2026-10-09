@@ -5,110 +5,57 @@
  */
 
 (function () {
-    const url = (typeof $request !== 'undefined' ? $request.url : '') || '';
-    const method = ((typeof $request !== 'undefined' ? $request.method : '') || 'GET').toUpperCase();
+    // ==========================================
+    // Phase 1: 请求阶段兜底 (若配置了 script-request-header)
+    // 强制声明 gzip, deflate 编码，防止 Cloudflare 返回 Brotli (br)
+    // ==========================================
+    if (typeof $response === 'undefined') {
+        let headers = (typeof $request !== 'undefined' && $request.headers) ? $request.headers : {};
+        let aeKey = Object.keys(headers).find(k => k.toLowerCase() === 'accept-encoding');
+        if (aeKey) {
+            headers[aeKey] = 'gzip, deflate';
+        }
+        $done({ headers });
+        return;
+    }
 
-    // 静态资源与非视频页面快速放行
-    if (
-        method !== 'GET' ||
-        !/\/video\//.test(url) ||
-        /\.(js|css|png|jpg|jpeg|gif|webp|svg|ico|woff2?|ttf|json|mp4)(\?|$)/i.test(url)
-    ) {
+    // ==========================================
+    // Phase 2: 响应体阶段 (script-response-body)
+    // 篡改 HTML：解除试看限制、设置年龄Cookie、注入播放器核心
+    // ==========================================
+    let body = $response.body;
+    if (!body || typeof body !== 'string') {
         $done({});
         return;
     }
 
-    // ==========================================
-    // Phase 1: 请求头阶段 (script-request-header)
-    // 强制移除 br (Brotli) 压缩，改为 gzip，使 QX 能正常解码并篡改 HTML
-    // ==========================================
-    if (typeof $request !== 'undefined' && typeof $response === 'undefined') {
-        let headers = $request.headers || {};
-        let aeKey = Object.keys(headers).find(k => k.toLowerCase() === 'accept-encoding');
-        if (aeKey) {
-            let ae = headers[aeKey] || '';
-            ae = ae.replace(/\bbr,?\s*/gi, '').replace(/,\s*br\b/gi, '').trim();
-            if (!ae) ae = 'gzip, deflate';
-            headers[aeKey] = ae;
+    // 状态码校验 (兼容数字与字符串形式的状态码)
+    const rawStatus = $response.status || $response.statusCode;
+    if (rawStatus) {
+        const code = parseInt(rawStatus, 10);
+        if (code !== 200 && code !== 206) {
+            $done({});
+            return;
         }
-        $done({ headers });
+    }
+
+    // 仅处理 HTML 页面
+    if (!/<html/i.test(body)) {
+        $done({});
         return;
     }
 
-    // ==========================================
-    // Phase 2: 响应头阶段 (script-response-header)
-    // 移除 CSP 安全策略头，并预置年龄验证 Cookie
-    // ==========================================
-    if (typeof $response !== 'undefined' && typeof $response.headers !== 'undefined' && typeof $response.body === 'undefined') {
-        let headers = $response.headers || {};
-        let ctKey = Object.keys(headers).find(k => k.toLowerCase() === 'content-type');
-        let ct = ctKey ? headers[ctKey] : '';
+    // 1. 静态移除 300 秒试看限制属性，杜绝原站自带脚本启动 5 分钟断播定时器
+    body = body.replace(/data-guest-preview-seconds="\d+"/gi, 'data-guest-preview-seconds="0"');
 
-        if (!ct || !ct.toLowerCase().includes('text/html')) {
-            $done({});
-            return;
-        }
+    // 2. 移除内联 CSP meta 标签
+    body = body.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, '');
 
-        const cspKeys = [
-            'content-security-policy',
-            'content-security-policy-report-only',
-            'x-webkit-csp',
-            'x-content-security-policy'
-        ];
-        Object.keys(headers).forEach(k => {
-            if (cspKeys.includes(k.toLowerCase())) {
-                delete headers[k];
-            }
-        });
-
-        // 预置年龄确认 Cookie
-        const cookieKey = Object.keys(headers).find(k => k.toLowerCase() === 'set-cookie') || 'Set-Cookie';
-        const ageCookie = 'gv_age_verified=1; Max-Age=31536000; Path=/; SameSite=Lax';
-        const existing = headers[cookieKey];
-        if (!existing) {
-            headers[cookieKey] = ageCookie;
-        } else if (Array.isArray(existing)) {
-            headers[cookieKey].push(ageCookie);
-        } else {
-            headers[cookieKey] = existing + '\n' + ageCookie;
-        }
-
-        $done({ headers });
-        return;
-    }
-
-    // ==========================================
-    // Phase 3: 响应体阶段 (script-response-body)
-    // 篡改 HTML：解除试看限制、清除弹窗、注入播放器核心
-    // ==========================================
-    if (typeof $response !== 'undefined' && typeof $response.body !== 'undefined') {
-        let body = $response.body;
-
-        if ($response.status && $response.status !== 200 && $response.status !== 206) {
-            $done({});
-            return;
-        }
-
-        if (!body || typeof body !== 'string' || !/<html/i.test(body)) {
-            $done({});
-            return;
-        }
-
-        // 1. 移除内联 CSP meta 标签
-        body = body.replace(/<meta[^>]*http-equiv=["']?Content-Security-Policy["']?[^>]*>/gi, '');
-
-        // 2. 清除服务端输出的 300 秒试看限制属性，防止原站自带脚本启动 5 分钟断播定时器
-        body = body.replace(/data-guest-preview-seconds="\d+"/gi, 'data-guest-preview-seconds="0"');
-
-        // 3. 清理原站静态结构中的试看提示与遮罩
-        body = body.replace(/<div[^>]*class="[^"]*watch-status[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
-        body = body.replace(/<div[^>]*class="[^"]*guest-preview-overlay[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
-        body = body.replace(/<div[^>]*class="[^"]*single-video-vip-promo[^"]*"[^>]*>[\s\S]*?<\/div>/gi, '');
-
-        // 4. 构造注入代码
-        const injectPayload = `
+    // 3. 构造注入 CSS (置于 <head> 前，首帧隐藏广告与弹窗)
+    const stylePayload = `
 <!-- [QX] Yidouge Video Unlocker & Enhanced Player -->
 <style id="ydg-unlocked-style">
+    /* 屏蔽试看提示与各类遮罩 */
     .watch-status,
     .watch-status--guest,
     .gv-preview-limit-notice,
@@ -125,12 +72,14 @@
         display: none !important;
     }
 
+    /* 恢复 body 正常滚动 */
     body.gv-preview-modal-open,
     html.gv-age-gate-pending,
     body.gv-age-gate-pending {
         overflow: auto !important;
     }
 
+    /* 隐藏 VIP 推广与冗余侧边栏 */
     .single-video-vip-promo,
     [data-vip-promo],
     .vip-promo,
@@ -140,6 +89,14 @@
     .video-sidebar--vip-entry,
     .site-footer__notice {
         display: none !important;
+    }
+
+    /* 修复原站容器限制，保证 16:9 播放器与底部工具栏完整显示不被裁剪 */
+    .single-video__player {
+        aspect-ratio: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: transparent !important;
     }
 
     .ydg-player-container {
@@ -303,6 +260,10 @@
         }
     }
 </style>
+`;
+
+    // 4. 构造注入 JS (置于 </body> 前，页面元素已就绪，秒开播放器)
+    const scriptPayload = `
 <script id="ydg-unlocked-script">
 (function() {
     'use strict';
@@ -745,7 +706,7 @@
                 clearInterval(timer);
                 observer.disconnect();
             }
-        }, 400);
+        }, 300);
     }
 
     var lastUrl = location.href;
@@ -765,18 +726,31 @@
 </script>
 `;
 
-        // 5. 注入到 HTML 文档中
-        if (/<\/head>/i.test(body)) {
-            body = body.replace(/<\/head>/i, injectPayload + '\n</head>');
-        } else if (/<\/body>/i.test(body)) {
-            body = body.replace(/<\/body>/i, injectPayload + '\n</body>');
-        } else {
-            body += injectPayload;
-        }
-
-        $done({ body });
-        return;
+    // 5. 注入到 HTML 文档中 (样式放 <head>，脚本放 </body> 前)
+    if (/<\/head>/i.test(body)) {
+        body = body.replace(/<\/head>/i, stylePayload + '\n</head>');
+    } else {
+        body = stylePayload + body;
     }
 
-    $done({});
+    if (/<\/body>/i.test(body)) {
+        body = body.replace(/<\/body>/i, scriptPayload + '\n</body>');
+    } else {
+        body += scriptPayload;
+    }
+
+    // 6. 响应头写入年龄确认 Cookie
+    let headers = $response.headers || {};
+    let cookieKey = Object.keys(headers).find(k => k.toLowerCase() === 'set-cookie') || 'Set-Cookie';
+    let ageCookie = 'gv_age_verified=1; Max-Age=31536000; Path=/; SameSite=Lax';
+    let existing = headers[cookieKey];
+    if (!existing) {
+        headers[cookieKey] = ageCookie;
+    } else if (Array.isArray(existing)) {
+        headers[cookieKey].push(ageCookie);
+    } else {
+        headers[cookieKey] = existing + '\n' + ageCookie;
+    }
+
+    $done({ body, headers });
 })();

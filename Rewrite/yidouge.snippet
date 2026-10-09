@@ -9,16 +9,13 @@ HOST-SUFFIX, google-analytics.com, reject
 
 [rewrite_local]
 # 1. 拦截播放统计与失败上报（防止服务器记录试看次数）
-^https?:\/\/.*yidouge\.(cc|com)\/wp-json\/goon-video\/v1\/(stats|player-failure) url reject-200
+^https?:\/\/.*yidouge\.(cc|com)\/wp-json\/goon-video\/v1\/(stats|player-failure) url reject-dict
 
-# 2. 请求头阶段：去除 Brotli (br) 压缩，强制返回 gzip，确保 QX 能解密并篡改 HTML
-^https?:\/\/.*yidouge\.(cc|com)\/video\/ url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/yidouge.js
+# 2. 原生请求头重写：去除 Brotli (br) 压缩，强制返回 gzip，确保 QX 能稳定解压并篡改 HTML
+^https?:\/\/.*yidouge\.(cc|com)\/video\/ url request-header [aA]ccept-[eE]ncoding:[^\r\n]+ Accept-Encoding: gzip, deflate
 
-# 3. 响应头阶段：放行 CSP 安全策略并预置年龄确认 Cookie
-^https?:\/\/.*yidouge\.(cc|com)\/video\/ url script-response-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/yidouge.js
-
-# 4. 响应体阶段：解除试看限制、净化页面、注入增强播放器
+# 3. 响应体阶段：解除试看限制、净化页面、注入增强播放器
 ^https?:\/\/.*yidouge\.(cc|com)\/video\/ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/yidouge.js
 
 [mitm]
-hostname = *.yidouge.cc, yidouge.cc, *.yidouge.com, yidouge.com
+hostname = yidouge.cc, *.yidouge.cc, yidouge.com, *.yidouge.com
