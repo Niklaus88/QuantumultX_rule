@@ -1,0 +1,11 @@
+#!name=中国联通 获取Cookie与凭据
+#!desc=自动截取最新版「中国联通 APP」首页查询与登录认证凭据，支持话费、流量、语音余量展示，兼容 Scriptable 小组件与 BoxJS
+# > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
+
+# 1. 首页余额与余量查询时截取 Cookie 与手机号 (最新版联通APP核心鉴权接口)
+^https?:\/\/m\.client\.10010\.com\/(mobileserviceimportant\/home\/queryUserInfo|mobileService\/home\/queryUserInfo|serviceimportantbusiness\/smart\/smartwisdomCommon) url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/10010.js
+
+# 2. 自动登录与凭据续期阶段截取 (获取 token_online、appId 与 Set-Cookie)
+^https?:\/\/(m\.client|loginxhm)\.10010\.com\/mobileService\/onLine\.htm url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/10010.js
+
+hostname = m.client.10010.com, loginxhm.10010.com
