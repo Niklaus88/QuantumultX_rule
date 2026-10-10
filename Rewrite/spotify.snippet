@@ -3,18 +3,18 @@
 # > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
 
 # 1. 拦截广告事件追踪、上报与会员推广弹窗
-^https?:\/\/(spclient\.wg|.*-spclient)\.spotify\.com(:443)?\/(gabo-receiver-service|pendragon|pam-view-service\/|ad-logic\/) url reject-200
+^https?:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(gabo-receiver-service|pendragon|pam-view-service\/|ad-logic\/) url reject-200
 
 # 2. 移除 ETag 缓存头，强制服务端返回 200 响应以保证重写生效
-^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)$ url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-header.js
+^https:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)$ url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-header.js
 
-# 3. 动态伪装 iPad 平台标识，解锁歌单、专辑、艺人页面的自由点歌特权
-^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/(artistview\/|.*-entity-view\/) url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-platform.js
+# 3. 动态伪装 iPad 平台标识，解锁已点赞歌曲(Collection)、歌单、专辑、艺人页面的自由选曲与快进特权
+^https:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(.*platform=iphone|artistview\/|.*-entity-view\/|collection\/) url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-platform.js
 
 # 4. 修改设备功能授权，解锁高品质与 HiFi 音质配置入口
-^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/device-capabilities\/v1\/capabilities url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-capabilities.js
+^https:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/device-capabilities\/v1\/capabilities url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-capabilities.js
 
-# 5. 重写 Protobuf 账户配置，净化广告并重构安全播放属性 (修复拖动进度条跳歌与播放几秒后中断)
-^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)$ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-proto.js
+# 5. 重写 Protobuf 账户配置与远程实验配置，净化广告并重构安全播放属性 (彻底修复拖动进度条跳歌、歌曲跳过无法播放、切歌中断异常)
+^https:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)$ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-proto.js
 
-hostname = spclient.wg.spotify.com, *spclient.spotify.com
+hostname = spclient.wg.spotify.com, *.wg.spotify.com, *spclient.spotify.com, gae2-spclient.wg.spotify.com
