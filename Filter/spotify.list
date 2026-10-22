@@ -1,0 +1,8 @@
+# NAME: Spotify
+# DESC: Spotify 屏蔽追踪与 QUIC 指引
+# > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
+# > 提示: 为彻底修复随机切歌与跳过 MITM 问题，请确保 QX 全局配置 [general] 已启用 udp_drop_list = 443, QUIC
+
+# 屏蔽 Spotify 广告与追踪域名
+host, aet.spotify.com, reject
+host-suffix, aet.spotify.com, reject

@@ -1,18 +1,25 @@
 #!name=Spotify 完整净化与体验增强
-#!desc=去除音频与视觉广告、解锁自由点歌与无限切歌、修复8-10秒暂停跳转与闪退异常、解锁全曲库畅听
+#!desc=去广告 + 解锁高级功能 + 修复随机切歌。参考 devchristian1337 及 SIJULY egern-radar 架构。
 # > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
+# > 重要说明: 请在 QX 全局配置 [general] 添加 udp_drop_list = 443, QUIC 屏蔽 QUIC，避免切歌与绕过 MITM；音质切勿设置为超高；启用后请重新登录 Spotify。
 
-# 1. 拦截音频广告、推荐位赞助广告与会员推广弹窗 (彻底去除播放器下方 BBBSA 广告与开屏营销，放行 gabo 播放心跳)
-^https?:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(ad-logic\/|pendragon|pam-view-service\/|.*scrollsita) url reject-200
+# 1. 移除 ETag 缓存头，强制服务端返回 200 响应
+^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/user-customization-service\/v1\/customize url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-header.js
 
-# 2. 移除 ETag 缓存头，强制服务端返回 200 响应以保证重写生效
-^https:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)$ url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-header.js
+# 2. 原生拦截营销弹窗、视频推荐流、账户推广、AI DJ 广告列表与音频广告 (直接返回 200 空字典或空响应)
+^https:\/\/(spclient\.wg|.*-spclient)\.spotify\.com(:443)?\/pendragon url reject-dict
+^https:\/\/(spclient\.wg|.*-spclient)\.spotify\.com(:443)?\/watch-feed-entrypoints\/v.\/discovery-from-seed url reject-dict
+^https:\/\/.*-spclient\.spotify\.com(:443)?\/pam-view-service\/ url reject-dict
+37i9dQZF1EYkqdzj48dyYq url reject-dict
+^https?:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/ad-logic\/ url reject-200
+^https?:\/\/(.*-spclient\.spotify\.com(:443)?|spclient\.wg\.spotify\.com)\/gabo-receiver-service url reject-200
 
-# 3. 动态伪装 iPad 平台标识，解锁已点赞歌曲(Collection)、歌单、专辑、艺人页面的自由选曲与快进特权
-^https:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(.*platform=iphone|artistview\/|.*-entity-view\/|collection\/) url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-platform.js
+# 3. 去除搜索流、主页信息流与滚动广告 (Protobuf 二进制实时净化)
+^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/browsita\/v.\/browse url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spot-NoSearchAd.js
+^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/casita\/v.\/home\/ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spot-NoHomeAd.js
+^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/scrollsita\/v.\/scroll\/spotify url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spot-NoScrollAd.js
 
-# 4. 重写 Protobuf 账户配置与远程实验配置 (基于 Eevee v3 架构，彻底消除 8-10 秒中断/跳歌/闪退与选歌限制)
-^https:\/\/(.*\.wg|.*-spclient)\.spotify\.com(:443)?\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)$ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-proto.js
+# 4. 重写 Protobuf 账户配置与远程实验配置 (基于 Eevee v3 本地配置覆盖，解锁点歌/切歌/会员功能)
+^https:\/\/(spclient\.wg\.spotify\.com|.*-spclient\.spotify\.com(:443)?)\/(bootstrap\/v1\/bootstrap|user-customization-service\/v1\/customize)(\?.*)?$ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/spotify-proto.js
 
 hostname = spclient.wg.spotify.com, *.wg.spotify.com, *spclient.spotify.com, gae2-spclient.wg.spotify.com
-
