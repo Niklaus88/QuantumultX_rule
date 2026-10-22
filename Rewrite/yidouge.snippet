@@ -3,9 +3,9 @@
 # > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
 
 # 1. 拦截播放统计与失败上报（防止服务器记录试看次数）
-^https?:\/\/.*yidouge\.(cc|com)\/wp-json\/goon-video\/v1\/(stats|player-failure) url reject-dict
+^https?:\/\/.*yidouge\.(cc|com|vip|me|net|xyz|top|tv)\/wp-json\/goon-video\/v1\/(stats|player-failure) url reject-dict
 
 # 2. 响应体阶段：解除试看限制、净化页面、注入增强播放器
-^https?:\/\/.*yidouge\.(cc|com)\/video\/ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/yidouge.js
+^https?:\/\/.*yidouge\.(cc|com|vip|me|net|xyz|top|tv)\/video\/ url script-response-body https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/yidouge.js
 
-hostname = yidouge.cc, *.yidouge.cc, yidouge.com, *.yidouge.com
+hostname = yidouge.cc, *.yidouge.cc, yidouge.com, *.yidouge.com, yidouge.vip, *.yidouge.vip
