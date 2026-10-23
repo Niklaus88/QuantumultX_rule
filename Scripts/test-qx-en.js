@@ -55,9 +55,10 @@ if ($response.statusCode != 200) {
 
         var isp = ispName ? formatISP(ispName) : "Unknown ISP";
 
+        // 上下对调：第一行（大字）显示国旗 + 地理位置 + ASN + 运营商；第二行（小字）显示类型 + 完整IP
         $done({
-            title: flag + " " + type + "  " + ipAddress,
-            subtitle: location + "  " + asn + "  " + isp,
+            title: flag + " " + location + "  " + asn + "  " + isp,
+            subtitle: type + "  " + ipAddress,
             ip: ipAddress
         });
     }
