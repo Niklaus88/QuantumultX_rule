@@ -52,15 +52,16 @@ if ($response.statusCode != 200) {
             if (n.includes("CLOUDFLARE")) return "CF";
             if (n.includes("IT7") || n.includes("BANDWAGON")) return "搬瓦工";
             
-                        // 未收录的 ISP 截取前 8 个字符兜底
+            // 未收录的 ISP 截取前 8 个字符兜底
             return n.length > 8 ? n.substring(0, 8) : name;
         }
 
         var isp = ispName ? getChineseISP(ispName) : "未知ISP";
 
+        // 上下对调：第一行（大字）显示国旗 + 地理位置 + ASN + 运营商；第二行（小字）显示类型 + 完整IP
         $done({
-            title: flag + " " + type + "  " + ipAddress,
-            subtitle: location + "  " + asn + "  " + isp,
+            title: flag + " " + location + "  " + asn + "  " + isp,
+            subtitle: type + "  " + ipAddress,
             ip: ipAddress
         });
     }
