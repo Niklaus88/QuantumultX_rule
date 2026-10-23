@@ -26,38 +26,9 @@ if ($response.statusCode != 200) {
         else if (obj["mobile"]) type = "Cellular";
         else if (obj["proxy"]) type = "Proxy";
 
-        var ispName = obj["isp"] || "";
-        function formatISP(name) {
-            if (!name) return "";
-            var n = name.toUpperCase();
-            
-            if (n.includes("CHUNGHWA") || n.includes("HINET")) return "Chunghwa";
-            if (n.includes("COGNETCLOUD") || n.includes("COGNET")) return "Cognet";
-            if (n.includes("AKARI")) return "Akari";
-            if (n.includes("BRITISH TELECOMMUNICATIONS")) return "BT";
-            if (n.includes("DMIT")) return "DMIT";
-            if (n.includes("HKT") || n.includes("PCCW")) return "HKT";
-            if (n.includes("HKBN")) return "HKBN";
-            if (n.includes("CMCC") || n.includes("CHINAMOBILE")) return "CMCC";
-            if (n.includes("CHINANET") || n.includes("CHINATELECOM")) return "Telecom";
-            if (n.includes("UNICOM")) return "Unicom";
-            if (n.includes("ALIBABA") || n.includes("ALIPAY")) return "Alibaba";
-            if (n.includes("TENCENT")) return "Tencent";
-            if (n.includes("GOOGLE")) return "Google";
-            if (n.includes("AMAZON") || n.includes("AWS")) return "AWS";
-            if (n.includes("MICROSOFT") || n.includes("AZURE")) return "Azure";
-            if (n.includes("ORACLE")) return "Oracle";
-            if (n.includes("CLOUDFLARE")) return "Cloudflare";
-            if (n.includes("IT7") || n.includes("BANDWAGON")) return "Bandwagon";
-            
-            return name.length > 12 ? name.substring(0, 12) : name;
-        }
-
-        var isp = ispName ? formatISP(ispName) : "Unknown ISP";
-
-        // 上下对调：第一行（大字）显示国旗 + 地理位置 + ASN + 运营商；第二行（小字）显示类型 + 完整IP
+        // 去掉冗余 ISP，第一行专注展示国旗 + 地理位置 + ASN；第二行展示类型 + 完整IP
         $done({
-            title: flag + " " + location + "  " + asn + "  " + isp,
+            title: flag + " " + location + "  " + asn,
             subtitle: type + "  " + ipAddress,
             ip: ipAddress
         });
