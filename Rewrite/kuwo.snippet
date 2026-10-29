@@ -1,8 +1,7 @@
 # > 酷我音乐 会员调试与广告净化
 # > 项目地址: https://github.com/Niklaus88/QuantumultX_rule
-# > 脚本源自: WeiGiegie/666 (GieGie777)
+# > 原脚本作者: WeiGiegie/666 (GieGie777)
 
-[rewrite_local]
 # 1. 拦截开屏与推广广告接口
 ^.*?(ad(.*)?\.tencentmusic\.com|kuwo\.cn\/((EcomResource|(Mobile)?Ad)Serv(er|ice)|(vip|(open)?api)?\/(setting\/sidebar\/menus|v\d\/(operate\/((adVip\/)?text|pop\/info)|online\/homepage\/homepageBanner|user\/freeMode|album\/adBar|app\/(newMenuList\/menuListInfo|pasterAdvert\/config)))|kuwopay\/vip-tab\/page\/floatbox|commercia\/eproxy\/boot\/recommend\/fee\/config)) url reject-200
 
@@ -12,5 +11,5 @@
 # 3. 播放器样式接口请求头修改
 ^https?:\/\/vip1\.kuwo\.cn\/commercia\/vip\/player\/getStyleListByModel url script-request-header https://raw.githubusercontent.com/Niklaus88/QuantumultX_rule/main/Scripts/kuwo.js
 
-[mitm]
+# 4. MitM 主机名
 hostname = *.kuwo.cn, abt-kuwo.tencentmusic.com, ad.tencentmusic.com:443
