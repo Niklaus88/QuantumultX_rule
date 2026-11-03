@@ -177,6 +177,44 @@
         box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
     }
 
+    .ydg-btn-primary:hover {
+        background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.45);
+    }
+
+    .ydg-btn-ep {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.22);
+        color: #f1f5f9 !important;
+    }
+
+    .ydg-btn-ep:hover {
+        background: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.45);
+        color: #fff !important;
+    }
+
+    .ydg-btn-ep.ydg-disabled {
+        opacity: 0.35 !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+        border-color: rgba(255, 255, 255, 0.08) !important;
+        color: #64748b !important;
+    }
+
+    .ydg-btn-next {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-color: #10b981;
+        color: #fff !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+    }
+
+    .ydg-btn-next:hover {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.45);
+    }
+
     .ydg-speeds {
         display: flex;
         align-items: center;
@@ -303,6 +341,59 @@
         var posterUrl = '';
         var title = '';
         var source = '';
+        var prevUrl = '';
+        var nextUrl = '';
+
+        // 策略A: 显式上一集 / 下一集属性与语义标签提取
+        var prevEl = document.querySelector('[data-prev-url], [data-video-prev], a[rel="prev"], .video-prev a, .prev-episode a, a.btn-prev');
+        if (prevEl) {
+            prevUrl = prevEl.getAttribute('data-prev-url') || prevEl.getAttribute('href') || '';
+        }
+
+        var nextEl = document.querySelector('[data-next-url], [data-video-next], a[rel="next"], .video-next a, .next-episode a, a.btn-next');
+        if (nextEl) {
+            nextUrl = nextEl.getAttribute('data-next-url') || nextEl.getAttribute('href') || '';
+        }
+
+        // 策略B: 精确适配一抖阁合集列表结构 (.author-playlist__item) 及通用选集列表
+        if (!prevUrl || !nextUrl) {
+            var ydgCurrent = document.querySelector('.author-playlist__item.is-current');
+            if (ydgCurrent) {
+                var prevNode = ydgCurrent.previousElementSibling;
+                if (prevNode && prevNode.matches && prevNode.matches('.author-playlist__item')) {
+                    prevUrl = prevNode.getAttribute('href') || '';
+                }
+                var nextNode = ydgCurrent.nextElementSibling;
+                if (nextNode && nextNode.matches && nextNode.matches('.author-playlist__item')) {
+                    nextUrl = nextNode.getAttribute('href') || '';
+                }
+            } else {
+                var ydgNextItem = document.querySelector('.author-playlist__item.is-next');
+                if (ydgNextItem && !nextUrl) {
+                    nextUrl = ydgNextItem.getAttribute('href') || '';
+                }
+            }
+
+            if (!prevUrl || !nextUrl) {
+                var activeItem = document.querySelector('.episode-item.active, .ep-item.active, .anthology-item.active, .playlist .active, [class*="episode"].active');
+                if (activeItem) {
+                    if (!prevUrl) {
+                        var pNode = activeItem.previousElementSibling;
+                        if (pNode) {
+                            var pLink = pNode.tagName === 'A' ? pNode : pNode.querySelector('a');
+                            if (pLink && pLink.getAttribute('href')) prevUrl = pLink.getAttribute('href');
+                        }
+                    }
+                    if (!nextUrl) {
+                        var nNode = activeItem.nextElementSibling;
+                        if (nNode) {
+                            var nLink = nNode.tagName === 'A' ? nNode : nNode.querySelector('a');
+                            if (nLink && nLink.getAttribute('href')) nextUrl = nLink.getAttribute('href');
+                        }
+                    }
+                }
+            }
+        }
 
         var wrap = document.querySelector('[data-video-player-wrap], .single-video__player');
         if (wrap) {
@@ -389,7 +480,9 @@
                 url: videoUrl,
                 poster: posterUrl,
                 title: title,
-                source: source
+                source: source,
+                prevUrl: prevUrl,
+                nextUrl: nextUrl
             };
         }
         return null;
@@ -457,6 +550,14 @@
             }
         });
 
+        if (info.nextUrl) {
+            video.addEventListener('ended', function() {
+                setTimeout(function() {
+                    window.location.href = info.nextUrl;
+                }, 1000);
+            });
+        }
+
         var errorPanel = document.createElement('div');
         errorPanel.className = 'ydg-error-panel';
         errorPanel.style.display = 'none';
@@ -485,6 +586,35 @@
         var toolbarLeft = document.createElement('div');
         toolbarLeft.className = 'ydg-toolbar-left';
 
+        // 1. 上一集按钮 (若存在或属于多集剧集)
+        if (info.prevUrl) {
+            var prevBtn = document.createElement('a');
+            prevBtn.className = 'ydg-btn ydg-btn-ep';
+            prevBtn.href = info.prevUrl;
+            prevBtn.innerHTML = '⏮ 上一集';
+            prevBtn.title = '点击播放上一集内容 (快捷键: Shift + P)';
+            toolbarLeft.appendChild(prevBtn);
+        } else if (info.nextUrl) {
+            var prevBtnDisabled = document.createElement('button');
+            prevBtnDisabled.type = 'button';
+            prevBtnDisabled.className = 'ydg-btn ydg-btn-ep ydg-disabled';
+            prevBtnDisabled.disabled = true;
+            prevBtnDisabled.innerHTML = '⏮ 上一集';
+            prevBtnDisabled.title = '当前已是第一集';
+            toolbarLeft.appendChild(prevBtnDisabled);
+        }
+
+        // 2. 下一集按钮 (若存在)
+        if (info.nextUrl) {
+            var nextBtn = document.createElement('a');
+            nextBtn.className = 'ydg-btn ydg-btn-ep ydg-btn-next';
+            nextBtn.href = info.nextUrl;
+            nextBtn.innerHTML = '⏭ 下一集';
+            nextBtn.title = '点击播放下一集内容 (快捷键: Shift + N)';
+            toolbarLeft.appendChild(nextBtn);
+        }
+
+        // 3. 高速下载按钮
         var downloadBtn = document.createElement('a');
         downloadBtn.className = 'ydg-btn ydg-btn-primary';
         downloadBtn.href = info.url;
@@ -571,7 +701,7 @@
 
         var shortcutsHint = document.createElement('span');
         shortcutsHint.className = 'ydg-shortcuts-hint';
-        shortcutsHint.title = '空格: 播放/暂停\\n←/→: 快退/快进 5s (按住Shift: 10s)\\n↑/↓: 调节音量\\nF: 全屏切换\\nM: 静音切换';
+        shortcutsHint.title = '空格: 播放/暂停\\n←/→: 快退/快进 5s (按住Shift: 10s)\\n↑/↓: 调节音量\\nF: 全屏切换\\nM: 静音切换\\nShift+P: 上一集\\nShift+N: 下一集';
         shortcutsHint.textContent = '⌨ 快捷键';
 
         toolbarRight.appendChild(speedBox);
@@ -636,6 +766,24 @@
                 case 'KeyM':
                     e.preventDefault();
                     video.muted = !video.muted;
+                    break;
+                case 'KeyP':
+                    if (e.shiftKey) {
+                        var prevLink = document.querySelector('.ydg-btn-ep[href]:not(.ydg-disabled)');
+                        if (prevLink && prevLink.href) {
+                            e.preventDefault();
+                            window.location.href = prevLink.href;
+                        }
+                    }
+                    break;
+                case 'KeyN':
+                    if (e.shiftKey) {
+                        var nextLink = document.querySelector('.ydg-btn-next[href]');
+                        if (nextLink && nextLink.href) {
+                            e.preventDefault();
+                            window.location.href = nextLink.href;
+                        }
+                    }
                     break;
             }
         });
